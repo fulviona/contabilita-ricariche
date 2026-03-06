@@ -621,3 +621,6 @@ document.getElementById("btn-settings").addEventListener("click", () => go("#set
   await openDB();
   renderRoute();
 })();
+if (navigator.serviceWorker?.controller) {
+  navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+}
