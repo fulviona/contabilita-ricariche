@@ -1,3 +1,4 @@
+
 // Contabilità Ricariche – service-worker.js v3
 // Cache app-shell + SWR per richieste GET; fallback offline; SPA routing
 
