@@ -561,6 +561,7 @@ if(ok){
 
   // FIX iPhone: aspetta il repaint prima del routing
   setTimeout(() => {
+    location.hash = "#home";
     renderRoute();
   }, 50);
 }
