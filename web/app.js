@@ -1,5 +1,5 @@
 
-// Contabilità Ricariche – app.js v3.1
+// Contabilità Ricariche – app.js v3.2 (NO PIN)
 
 /* THEME */
 const htmlEl = document.documentElement;
@@ -47,7 +47,7 @@ function eur(x){ return (x<0?'-€ ':'€ ')+Math.abs(x).toFixed(2).replace('.',
 function saldo(c){ const d=c.totale-c.pagato-c.acconti; return d>0? -Math.abs(d) : (Math.abs(d)<1e-9?0:d); }
 function uid(){ return Date.now(); }
 
-/* Elements */
+/* Elements & Routing */
 const viewHome = document.getElementById('view-home');
 const viewDetail = document.getElementById('view-detail');
 const viewSettings = document.getElementById('view-settings');
@@ -56,10 +56,6 @@ function go(r){ location.hash=r; }
 
 window.addEventListener('hashchange', renderRoute);
 async function renderRoute(){
-  if(!sessionStorage.getItem('auth_ok') && await hasPIN()){
-    showPinGate();
-    return;
-  }
   const h = location.hash || '#home';
   if(h.startsWith('#detail:')){ renderDetail(Number(h.split(':')[1])); }
   else if(h==='#settings'){ renderSettings(); }
@@ -146,7 +142,7 @@ async function renderDetail(id){
   show(viewDetail);
 }
 
-/* Settings */
+/* Settings (PIN info card A2-b) */
 function renderSettings(){
   const t = localStorage.getItem('theme')||'auto';
   viewSettings.innerHTML = `
@@ -157,25 +153,22 @@ function renderSettings(){
     <div class="inline"><span>Chiaro</span><input type="radio" name="theme" value="light" ${t==='light'?'checked':''}></div>
     <div class="inline"><span>Scuro</span><input type="radio" name="theme" value="dark" ${t==='dark'?'checked':''}></div>
   </div>
-  <div class="setting">
+  <div class="setting info-anim">
     <h4>PIN Accesso</h4>
-    <div class="inline"><span>Stato PIN</span><span id="pin-status">${localStorage.getItem('pin_hash')?'Attivo':'Non impostato'}</span></div>
-    <div class="actions" style="margin-top:8px">
-      <button class="btn" id="btn-pin-set">Imposta/Modifica PIN</button>
-      <button class="btn danger" id="btn-pin-remove">Rimuovi PIN</button>
+    <div class="info-box">
+      <div class="info-icon">🚫</div>
+      <div class="info-text">Questa funzione è temporaneamente disabilitata.</div>
     </div>
   </div>
   <div class="setting">
     <h4>Operazioni</h4>
     <div class="actions">
       <button class="btn danger" id="btn-wipe-clients">Cancella TUTTI i clienti</button>
-      <button class="btn danger" id="btn-wipe-all">RESET totale (clienti + PIN + tema)</button>
+      <button class="btn danger" id="btn-wipe-all">RESET totale (clienti + tema)</button>
     </div>
   </div>
 </div>`;
   document.querySelectorAll("input[name='theme']").forEach(r=>r.addEventListener('change',e=>{ localStorage.setItem('theme',e.target.value); applyTheme(); }));
-  document.getElementById('btn-pin-set').addEventListener('click', pinSetFlow);
-  document.getElementById('btn-pin-remove').addEventListener('click', pinRemoveFlow);
   document.getElementById('btn-wipe-clients').addEventListener('click', wipeClientsFlow);
   document.getElementById('btn-wipe-all').addEventListener('click', wipeAllFlow);
   show(viewSettings);
@@ -244,49 +237,7 @@ document.getElementById('btn-export').addEventListener('click', async()=>{
 
 /* Wipe */
 async function wipeClientsFlow(){ openModal('Conferma', `<p>Eliminare <b>TUTTI</b> i clienti?</p>`, async()=>{ await clearAll(); go('#home'); }); }
-async function wipeAllFlow(){ openModal('RESET Totale', `<p>Eliminare clienti, PIN e impostazioni?</p>`, async()=>{ await clearAll(); localStorage.removeItem('pin_hash'); localStorage.removeItem('theme'); sessionStorage.removeItem('auth_ok'); applyTheme(); location.reload(); }); }
-
-/* PIN */
-async function sha256Hex(txt){ if(window.crypto?.subtle){ const enc=new TextEncoder().encode(txt); const buf=await crypto.subtle.digest('SHA-256',enc); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); } else { let h=0; for(let i=0;i<txt.length;i++){ h=(h<<5)-h+txt.charCodeAt(i); h|=0; } return String(h);} }
-async function hasPIN(){ return !!localStorage.getItem('pin_hash'); }
-async function setPIN(pin){ localStorage.setItem('pin_hash', await sha256Hex(pin)); }
-async function removePIN(){ localStorage.removeItem('pin_hash'); }
-async function checkPIN(pin){ const h=localStorage.getItem('pin_hash'); if(!h) return true; return (await sha256Hex(pin))===h; }
-
-const pinGate=document.getElementById('pin-gate');
-const pinInputs=pinGate.querySelectorAll('.pin-inputs input');
-const pinClear=document.getElementById('pin-clear');
-function showPinGate(){ pinGate.classList.remove('hidden'); pinInputs.forEach(i=>i.value=''); pinInputs[0].focus(); }
-function shakePin(){ const card=pinGate.querySelector('.pin-card'); card.style.animation='shake .3s'; setTimeout(()=>{ card.style.animation=''; },300); }
-
-pinInputs.forEach((inp,idx)=>{
-  inp.addEventListener('input',()=>{
-    if(inp.value && idx<3) pinInputs[idx+1].focus();
-    const pin=[...pinInputs].map(i=>i.value).join('');
-    if(pin.length===4){
-      checkPIN(pin).then(ok=>{
-        if(ok){
-          sessionStorage.setItem('auth_ok','1');
-          pinGate.classList.add('hidden');
-          setTimeout(()=>{ if(location.hash!=='#home') location.hash='#home'; renderRoute(); },50);
-        }else{
-          pinInputs.forEach(i=>i.value=''); pinInputs[0].focus(); shakePin();
-        }
-      });
-    }
-  });
-  inp.addEventListener('keydown',(e)=>{ if(e.key==='Backspace' && !inp.value && idx>0) pinInputs[idx-1].focus(); });
-});
-
-pinClear.onclick=()=>{ pinInputs.forEach(i=>i.value=''); pinInputs[0].focus(); };
-
-function pinSetFlow(){ openModal('Imposta/Modifica PIN', `
-  <label class='label'>Nuovo PIN</label>
-  <input id='p1' class='input' type='password' inputmode='numeric' maxlength='4'>
-  <label class='label'>Conferma PIN</label>
-  <input id='p2' class='input' type='password' inputmode='numeric' maxlength='4'>
-`, async()=>{ const p1=document.getElementById('p1').value.trim(); const p2=document.getElementById('p2').value.trim(); if(p1.length!==4 || p2.length!==4 || p1!==p2){ alert('PIN non valido o non coincidente'); return; } await setPIN(p1); alert('PIN impostato'); }); }
-function pinRemoveFlow(){ openModal('Rimuovi PIN', `<p>Rimuovere il PIN?</p>`, async()=>{ await removePIN(); sessionStorage.removeItem('auth_ok'); alert('PIN rimosso'); }); }
+async function wipeAllFlow(){ openModal('RESET Totale', `<p>Eliminare clienti e impostazioni tema?</p>`, async()=>{ await clearAll(); localStorage.removeItem('theme'); applyTheme(); location.reload(); }); }
 
 /* Toolbar */
 document.getElementById('btn-new').addEventListener('click', newCliente);

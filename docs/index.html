@@ -47,20 +47,6 @@
     </div>
   </div>
 
-  <div id="pin-gate" class="pin-gate hidden">
-    <div class="pin-card">
-      <h2>Inserisci PIN</h2>
-      <div class="pin-inputs">
-        <input type="password" inputmode="numeric" maxlength="1" />
-        <input type="password" inputmode="numeric" maxlength="1" />
-        <input type="password" inputmode="numeric" maxlength="1" />
-        <input type="password" inputmode="numeric" maxlength="1" />
-      </div>
-      <div class="pin-actions"><button id="pin-clear">Cancella</button></div>
-      <p class="pin-hint">Imposta o modifica il PIN da Impostazioni</p>
-    </div>
-  </div>
-
   <input type="file" id="file-input" accept="application/json" class="hidden" />
 
   <script src="app.js"></script>
@@ -69,11 +55,6 @@
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js');
       });
-    }
-  </script>
-  <script>
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
     }
   </script>
 </body>
