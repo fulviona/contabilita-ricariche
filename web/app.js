@@ -554,11 +554,17 @@ pinInputs.forEach((inp, idx) => {
 
     if(pin.length === 4){
       checkPIN(pin).then(ok => {
+        
+if(ok){
+  sessionStorage.setItem("auth_ok", "1");
+  pinGate.classList.add("hidden");
 
-        if(ok){
-          sessionStorage.setItem("auth_ok", "1");
-          pinGate.classList.add("hidden");
-          renderRoute();
+  // FIX iPhone: aspetta il repaint prima del routing
+  setTimeout(() => {
+    renderRoute();
+  }, 50);
+}
+
         }
         else {
           pinInputs.forEach(i => i.value = "");
