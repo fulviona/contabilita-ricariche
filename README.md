@@ -1,48 +1,18 @@
-# Contabilità Ricariche – PWA iPhone (Offline)
+# Contabilità Ricariche – PWA iPhone (Stile App, Portrait, PIN)
 
-PWA (Progressive Web App) da usare **su iPhone/iPad**, con salvataggio dati **in locale** (IndexedDB), installabile come **App** dalla Home. Funziona **offline** grazie al Service Worker. Saldi **negativi in rosso**.
+Questa è la versione **stile app iPhone**, ottimizzata per **verticale**, con:
+- **Tema scuro/chiaro** (auto + toggle in Impostazioni)
+- **Lista clienti a card** (saldo negativo in rosso)
+- **Dettaglio cliente** a schermo intero
+- **+ Nuovo cliente**, **Modifica**, **Acconto**, **Ricarica**, **Elimina**
+- **Impostazioni** con **PIN di accesso** (4 cifre), **Cancella TUTTI i clienti**, **Reset totale**
+- **Importa/Esporta** (JSON) e funzionamento **offline** (Service Worker)
 
-## Funzionalità
-- Lista clienti con Totale, Pagato, Acconti, **Saldo** (negativo in rosso)
-- Pulsanti **Acconto** e **Ricarica** (aggiornano i dati in locale)
-- **Importa** / **Esporta** dati in JSON per backup
-- **Stampa/Condividi** (usa il foglio di stampa di iOS)
-- **Solo iPhone/iPad** (blocco soft per altri dispositivi)
-- **Offline** completo (cache app-shell)
+## Pubblicazione con GitHub Pages
+1. Crea il repository e carica i file.
+2. In **Settings → Pages** scegli **Deploy from a branch** → Branch `main` → Folder `/docs` → Save.
+3. La PWA sarà disponibile a: `https://<tuo-utente>.github.io/<repo>/`.
+4. Da **Safari su iPhone** → **Condividi → Aggiungi a Home**.
 
-## Struttura
-```
-contabilita-ricariche-pwa/
-├── web/                 # sorgenti PWA
-│   ├── index.html
-│   ├── styles.css
-│   ├── app.js
-│   ├── manifest.json
-│   ├── service-worker.js
-│   └── assets/
-│       ├── icon-192.png
-│       └── icon-512.png
-├── docs/                # copia per GitHub Pages
-│   └── (stessi file della cartella web/)
-└── README.md
-```
-
-## Pubblicazione su **GitHub Pages** (Versione A)
-1. Crea un repository GitHub, ad esempio `contabilita-ricariche`.
-2. Carica **l'intero contenuto** di questa cartella (ZIP → estrai → upload file e cartelle).
-3. Vai su **Settings → Pages**.
-4. In **Build and deployment** scegli **Deploy from a branch**.
-5. Scegli **Branch: `main`** e **Folder: `/docs`** → **Save**.
-6. Attendi 1-2 minuti. L'app sarà disponibile a un URL simile a:
-   `https://<tuo-utente>.github.io/contabilita-ricariche/`
-
-## Installazione su iPhone/iPad
-1. Apri l'URL in **Safari** su iPhone/iPad.
-2. Tocca **Condividi** → **Aggiungi a Home**.
-3. Avvia l'app dall'icona in Home. Da ora funziona **anche offline**.
-
-## Dati solo locali
-I dati sono salvati in **IndexedDB** del browser (on-device). Nessun invio a server. Usa **Esporta** per fare un backup `.json`. Usa **Importa** per ripristinare.
-
-## Nota su “solo iPhone”
-Il blocco è **soft** (check User-Agent / iPadOS). Per esigenze di sicurezza più rigide serve un'app iOS nativa.
+## Sicurezza PIN
+Il PIN è salvato come **hash SHA‑256** nel `localStorage` del device e verificato localmente. Non è una sicurezza forte come FaceID o un'app nativa, ma impedisce aperture casuali. Per requisiti più rigidi valuta una **app iOS** nativa.

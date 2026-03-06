@@ -1,11 +1,12 @@
 
 <!doctype html>
-<html lang="it">
+<html lang="it" data-theme="auto">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="color-scheme" content="light dark" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="manifest" href="manifest.json" />
   <title>Contabilità Ricariche</title>
@@ -13,38 +14,27 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>Contabilità Ricariche</h1>
-    <div class="actions">
-      <button id="btn-importa" title="Importa dati (.json)">Importa</button>
-      <button id="btn-esporta" title="Esporta dati (.json)">Esporta</button>
-      <button id="btn-stampa" title="Stampa / Condividi">Stampa/Condividi</button>
-    </div>
+    <div class="title">Ricariche</div>
+    <nav class="toolbar">
+      <button id="btn-new" aria-label="Nuovo cliente">＋</button>
+      <button id="btn-import" aria-label="Importa">⤒</button>
+      <button id="btn-export" aria-label="Esporta">⤓</button>
+      <button id="btn-settings" aria-label="Impostazioni">⚙︎</button>
+    </nav>
   </header>
 
-  <main>
-    <div id="ios-only" class="hidden warn">Questa app è disponibile solo su iPhone/iPad.</div>
-
-    <table id="clients-table" class="card">
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th>Totale</th>
-          <th>Pagato</th>
-          <th>Acconti</th>
-          <th>Saldo</th>
-          <th>Azioni</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <main id="app">
+    <!-- SPA views -->
+    <section id="view-home" class="view active" aria-label="Lista clienti"></section>
+    <section id="view-detail" class="view" aria-label="Dettaglio cliente"></section>
+    <section id="view-settings" class="view" aria-label="Impostazioni"></section>
   </main>
 
+  <!-- Modals -->
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-content">
       <h2 id="modal-title">Titolo</h2>
-      <label>Importo (€)
-        <input type="number" id="amount" inputmode="decimal" step="0.01" />
-      </label>
+      <div id="modal-body"></div>
       <div class="modal-actions">
         <button id="cancel">Annulla</button>
         <button id="confirm">Conferma</button>
@@ -52,7 +42,25 @@
     </div>
   </div>
 
+  <!-- PIN Gate -->
+  <div id="pin-gate" class="pin-gate hidden">
+    <div class="pin-card">
+      <h2>Inserisci PIN</h2>
+      <div class="pin-inputs">
+        <input type="password" inputmode="numeric" maxlength="1" />
+        <input type="password" inputmode="numeric" maxlength="1" />
+        <input type="password" inputmode="numeric" maxlength="1" />
+        <input type="password" inputmode="numeric" maxlength="1" />
+      </div>
+      <div class="pin-actions">
+        <button id="pin-clear">Cancella</button>
+      </div>
+      <p class="pin-hint">Suggerimento: imposta o modifica il PIN in Impostazioni</p>
+    </div>
+  </div>
+
   <input type="file" id="file-input" accept="application/json" class="hidden" />
+
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {

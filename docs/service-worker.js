@@ -1,5 +1,5 @@
 
-const CACHE = 'ricariche-cache-v1';
+const CACHE = 'ricariche-cache-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -19,7 +19,6 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   e.respondWith(
     caches.match(req).then(res => res || fetch(req).then(networkRes => {
-      // Cache new GET responses
       if (req.method === 'GET' && networkRes && networkRes.status === 200) {
         const copy = networkRes.clone();
         caches.open(CACHE).then(c => c.put(req, copy));

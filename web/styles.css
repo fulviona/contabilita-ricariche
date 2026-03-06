@@ -1,35 +1,80 @@
 
 *{box-sizing:border-box}
-:root{--c1:#0ea5e9;--c2:#111827;--ok:#0b8f3a;--bad:#d83434;--bg:#f6f7fb}
+:root{
+  --bg:#f6f7fb; --fg:#111827; --sub:#6b7280; --card:#ffffff; --muted:#e5e7eb;
+  --accent:#0ea5e9; --ok:#16a34a; --bad:#dc2626;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0b0f14; --fg:#e5e7eb; --sub:#9ca3af; --card:#111827; --muted:#1f2937; --accent:#38bdf8; --ok:#22c55e; --bad:#f87171; }
+}
+html[data-theme="dark"]{ --bg:#0b0f14; --fg:#e5e7eb; --sub:#9ca3af; --card:#111827; --muted:#1f2937; --accent:#38bdf8; --ok:#22c55e; --bad:#f87171; }
 html,body{height:100%}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--c2)}
-.topbar{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid #e5e7eb}
-h1{font-size:18px;margin:0}
-.actions{display:flex;gap:8px}
-.actions button{padding:8px 10px;border:1px solid #cbd5e1;background:#fff;border-radius:10px;cursor:pointer}
-.actions button:hover{background:#f3f4f6}
-main{padding:16px}
-.card{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
-th,td{padding:12px 10px;border-bottom:1px solid #eee;text-align:left}
-th{background:#fafafa;font-weight:600;color:#374151}
-tr:hover{background:#fcfcff}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--fg)}
+.topbar{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--muted);z-index:10}
+.title{font-weight:700}
+.toolbar{display:flex;gap:8px}
+.toolbar button{width:36px;height:36px;border-radius:10px;border:1px solid var(--muted);background:transparent;color:var(--fg);font-size:18px}
+.toolbar button:active{background:var(--muted)}
+
+main{padding:12px}
+.view{display:none}
+.view.active{display:block}
+
+/* Portrait-first layout: single column cards */
+.list{display:flex;flex-direction:column;gap:12px;max-width:680px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--muted);border-radius:14px;padding:12px}
+.card h3{margin:0 0 6px 0;font-size:18px}
+.row{display:flex;gap:10px;flex-wrap:wrap;color:var(--sub);font-size:14px}
 .bad{color:var(--bad);font-weight:700}
 .good{color:var(--ok);font-weight:700}
-.actions-cell button{margin-right:8px;padding:6px 10px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer}
-.actions-cell button:hover{background:#f3f4f6}
-.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25)}
+.actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:10px 12px;border-radius:10px;border:1px solid var(--muted);background:transparent;color:var(--fg)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+
+/* Detail view */
+.detail{max-width:680px;margin:0 auto}
+.detail .group{background:var(--card);border:1px solid var(--muted);border-radius:14px;padding:12px;margin-bottom:12px}
+.detail .actions{justify-content:space-between}
+
+/* Settings */
+.settings{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.setting{background:var(--card);border:1px solid var(--muted);border-radius:14px;padding:12px}
+.setting h4{margin:0 0 8px 0}
+.setting .inline{display:flex;align-items:center;justify-content:space-between}
+.switch{position:relative;width:44px;height:26px;background:var(--muted);border-radius:18px}
+.switch input{display:none}
+.switch .dot{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s ease}
+.switch input:checked + .dot{transform:translateX(18px)}
+
+/* Modal */
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35)}
 .hidden{display:none}
-.modal-content{background:#fff;padding:16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.15);width:100%;max-width:360px}
+.modal-content{background:var(--card);color:var(--fg);padding:16px;border-radius:14px;border:1px solid var(--muted);width:100%;max-width:360px}
 .modal-content h2{margin:0 0 10px}
-.modal-content label{display:block;margin:10px 0}
-.modal-actions{display:flex;justify-content:flex-end;gap:8px}
-.modal-actions button{padding:8px 12px;border:0;border-radius:8px;cursor:pointer}
-#cancel{background:#e5e7eb}
-#confirm{background:var(--c1);color:#fff}
-.warn{padding:12px 14px;margin:12px 0;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:10px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.input{width:100%;padding:10px;border-radius:10px;border:1px solid var(--muted);background:transparent;color:var(--fg)}
+.label{font-size:14px;color:var(--sub);margin:6px 0 4px}
+
+/* PIN Gate */
+.pin-gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:100}
+.pin-card{background:var(--card);padding:18px;border-radius:16px;border:1px solid var(--muted);width:92%;max-width:360px;text-align:center}
+.pin-inputs{display:flex;gap:8px;justify-content:center;margin:10px 0}
+.pin-inputs input{width:48px;height:48px;border-radius:10px;border:1px solid var(--muted);text-align:center;font-size:24px;background:transparent;color:var(--fg)}
+.pin-actions{display:flex;justify-content:center}
+.pin-hint{color:var(--sub);font-size:12px}
+
+@media (orientation: landscape) {
+  /* Manteniamo tutto leggibile anche in orizzontale, ma l'ottimizzazione principale è per portrait */
+  main{padding:16px}
+}
+
+@media (hover:none){
+  /* touch-friendly */
+  .btn,.toolbar button{min-height:44px}
+}
+
 @media print {
-  .topbar,.actions,.modal{display:none!important}
+  .topbar,.modal,.pin-gate,.toolbar{display:none!important}
   body{background:#fff}
-  table{page-break-inside:auto}
-  tr{page-break-inside:avoid}
 }
