@@ -7,10 +7,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="color-scheme" content="light dark" />
-  <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="manifest" href="manifest.json" />
-  <title>Contabilità Ricariche</title>
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png" />
   <link rel="stylesheet" href="styles.css" />
+  <title>Contabilità Ricariche</title>
 </head>
 <body>
   <header class="topbar">
@@ -19,18 +21,21 @@
       <button id="btn-new" aria-label="Nuovo cliente">＋</button>
       <button id="btn-import" aria-label="Importa">⤒</button>
       <button id="btn-export" aria-label="Esporta">⤓</button>
+      <button id="btn-search" aria-label="Cerca">🔍</button>
       <button id="btn-settings" aria-label="Impostazioni">⚙︎</button>
     </nav>
   </header>
 
+  <div id="search-bar" class="search-bar hidden">
+    <input type="text" id="search-input" placeholder="Cerca cliente..." />
+  </div>
+
   <main id="app">
-    <!-- SPA views -->
     <section id="view-home" class="view active" aria-label="Lista clienti"></section>
     <section id="view-detail" class="view" aria-label="Dettaglio cliente"></section>
     <section id="view-settings" class="view" aria-label="Impostazioni"></section>
   </main>
 
-  <!-- Modals -->
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-content">
       <h2 id="modal-title">Titolo</h2>
@@ -42,7 +47,6 @@
     </div>
   </div>
 
-  <!-- PIN Gate -->
   <div id="pin-gate" class="pin-gate hidden">
     <div class="pin-card">
       <h2>Inserisci PIN</h2>
@@ -52,10 +56,8 @@
         <input type="password" inputmode="numeric" maxlength="1" />
         <input type="password" inputmode="numeric" maxlength="1" />
       </div>
-      <div class="pin-actions">
-        <button id="pin-clear">Cancella</button>
-      </div>
-      <p class="pin-hint">Suggerimento: imposta o modifica il PIN in Impostazioni</p>
+      <div class="pin-actions"><button id="pin-clear">Cancella</button></div>
+      <p class="pin-hint">Imposta o modifica il PIN da Impostazioni</p>
     </div>
   </div>
 
@@ -67,6 +69,11 @@
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js');
       });
+    }
+  </script>
+  <script>
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
     }
   </script>
 </body>
