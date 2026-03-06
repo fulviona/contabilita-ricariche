@@ -1,0 +1,61 @@
+
+<!doctype html>
+<html lang="it" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Contabilità Ricariche</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="title" id="title-home" role="button" aria-label="Vai alla home">Ricariche</div>
+    <nav class="toolbar">
+      <button id="btn-new" aria-label="＋ cliente">＋</button>
+      <button id="btn-import" aria-label="⤒">⤒</button>
+      <button id="btn-export" aria-label="⤓">⤓</button>
+      <button id="btn-search" aria-label="🔍">🔍</button>
+      <button id="btn-settings" aria-label="⚙︎">⚙︎</button>
+    </nav>
+  </header>
+
+  <div id="search-bar" class="search-bar hidden">
+    <input type="text" id="search-input" placeholder="🔍 cliente..." />
+  </div>
+
+  <main id="app">
+    <section id="view-home" class="view active" aria-label="Lista clienti"></section>
+    <section id="view-detail" class="view" aria-label="Dettaglio cliente"></section>
+    <section id="view-settings" class="view" aria-label="⚙︎"></section>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h2 id="modal-title">Titolo</h2>
+      <div id="modal-body"></div>
+      <div class="modal-actions">
+        <button id="cancel">Annulla</button>
+        <button id="confirm">Conferma</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="file-input" accept="application/json" class="hidden" />
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js');
+      });
+    }
+  </script>
+</body>
+</html>
