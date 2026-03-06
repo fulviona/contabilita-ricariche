@@ -1,0 +1,163 @@
+
+import pandas as pd
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from docx import Document
+from docx.shared import Pt, RGBColor
+from datetime import datetime
+
+INPUT = 'data/ricariche.xlsx'
+PDF_OUT = 'outputs/report.pdf'
+DOCX_OUT = 'outputs/report.docx'
+
+def compute(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    # Calcoli
+    df['Da Pagare'] = df['Importo Totale'] - df['Importo Pagato'] - df['Acconti']
+    # Saldo negativo quando il cliente deve pagare
+    df['Saldo'] = df['Da Pagare'].apply(lambda x: -abs(x) if x > 0 else (0 if abs(x) < 1e-9 else x))
+    return df
+
+def format_eur(x: float) -> str:
+    return f"€ {x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+def build_pdf(df: pd.DataFrame):
+    c = canvas.Canvas(PDF_OUT, pagesize=A4)
+    width, height = A4
+    margin = 15*mm
+
+    # Header
+    c.setFont('Helvetica-Bold', 16)
+    c.drawString(margin, height - margin, 'Report Contabilità Ricariche')
+    c.setFont('Helvetica', 9)
+    c.drawString(margin, height - margin - 12, f"Generato il: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+
+    # Riepilogo
+    df_sum = df.copy()
+    totale = df_sum['Importo Totale'].sum()
+    incassato = (df_sum['Importo Pagato'] + df_sum['Acconti']).sum()
+    da_incassare = (df_sum['Da Pagare'].clip(lower=0)).sum()
+    saldo_tot = df_sum['Saldo'].sum()
+
+    y = height - margin - 36
+    c.setFont('Helvetica-Bold', 11)
+    c.drawString(margin, y, 'Riepilogo')
+    y -= 14
+    c.setFont('Helvetica', 10)
+    for label, val in [
+        ('Totale fatturato (Importo Totale):', format_eur(totale)),
+        ('Incassato (Pagato + Acconti):', format_eur(incassato)),
+        ('Da incassare:', format_eur(da_incassare)),
+        ('Saldo complessivo:', format_eur(saldo_tot)),
+    ]:
+        c.drawString(margin, y, label)
+        c.drawRightString(width - margin, y, str(val))
+        y -= 12
+
+    # Tabella semplice
+    y -= 8
+    c.setFont('Helvetica-Bold', 10)
+    headers = ['Cliente', 'Totale', 'Pagato', 'Acconti', 'Saldo']
+    col_x = [margin, margin+60*mm, margin+90*mm, margin+120*mm, width - margin]
+    for i, h in enumerate(headers):
+        anchor = col_x[i] if i == 0 else col_x[i] - 2
+        if i == 0:
+            c.drawString(anchor, y, h)
+        else:
+            c.drawRightString(col_x[i], y, h)
+    y -= 10
+    c.setLineWidth(0.5)
+    c.line(margin, y, width - margin, y)
+    y -= 8
+
+    c.setFont('Helvetica', 9)
+    for _, r in df.iterrows():
+        if y < margin + 40:
+            c.showPage()
+            y = height - margin
+            c.setFont('Helvetica-Bold', 10)
+            for i, h in enumerate(headers):
+                anchor = col_x[i] if i == 0 else col_x[i] - 2
+                if i == 0:
+                    c.drawString(anchor, y, h)
+                else:
+                    c.drawRightString(col_x[i], y, h)
+            y -= 10
+            c.setLineWidth(0.5)
+            c.line(margin, y, width - margin, y)
+            y -= 8
+            c.setFont('Helvetica', 9)
+
+        c.setFillColor(colors.black)
+        c.drawString(col_x[0], y, str(r['Cliente']))
+        c.drawRightString(col_x[1], y, format_eur(r['Importo Totale']))
+        c.drawRightString(col_x[2], y, format_eur(r['Importo Pagato']))
+        c.drawRightString(col_x[3], y, format_eur(r['Acconti']))
+        # Saldo in rosso se negativo
+        if r['Saldo'] < 0:
+            c.setFillColor(colors.red)
+        else:
+            c.setFillColor(colors.green)
+        c.drawRightString(col_x[4], y, format_eur(r['Saldo']))
+        c.setFillColor(colors.black)
+        y -= 12
+
+    c.save()
+
+def build_docx(df: pd.DataFrame):
+    doc = Document()
+    h = doc.add_heading('Report Contabilità Ricariche', level=1)
+    p = doc.add_paragraph(f"Generato il: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+
+    # Riepilogo
+    df_sum = df.copy()
+    totale = df_sum['Importo Totale'].sum()
+    incassato = (df_sum['Importo Pagato'] + df_sum['Acconti']).sum()
+    da_incassare = (df_sum['Da Pagare'].clip(lower=0)).sum()
+    saldo_tot = df_sum['Saldo'].sum()
+    doc.add_heading('Riepilogo', level=2)
+    for label, val in [
+        ('Totale fatturato (Importo Totale):', format_eur(totale)),
+        ('Incassato (Pagato + Acconti):', format_eur(incassato)),
+        ('Da incassare:', format_eur(da_incassare)),
+        ('Saldo complessivo:', format_eur(saldo_tot)),
+    ]:
+        pr = doc.add_paragraph()
+        run1 = pr.add_run(label + ' ')
+        run1.bold = True
+        pr.add_run(str(val))
+
+    # Tabella dettagli
+    table = doc.add_table(rows=1, cols=5)
+    hdr_cells = table.rows[0].cells
+    for i, h in enumerate(['Cliente','Totale','Pagato','Acconti','Saldo']):
+        hdr_cells[i].text = h
+    for _, r in df.iterrows():
+        row_cells = table.add_row().cells
+        row_cells[0].text = str(r['Cliente'])
+        row_cells[1].text = format_eur(r['Importo Totale'])
+        row_cells[2].text = format_eur(r['Importo Pagato'])
+        row_cells[3].text = format_eur(r['Acconti'])
+        # Saldo con colore
+        saldo_text = format_eur(r['Saldo'])
+        run = row_cells[4].paragraphs[0].add_run(saldo_text)
+        if r['Saldo'] < 0:
+            run.font.color.rgb = RGBColor(0xFF, 0x00, 0x00)
+            run.bold = True
+        else:
+            run.font.color.rgb = RGBColor(0x00, 0x80, 0x00)
+            run.bold = True
+
+    doc.save(DOCX_OUT)
+
+def main():
+    df = pd.read_excel(INPUT, engine='openpyxl')
+    df = compute(df)
+    build_pdf(df)
+    build_docx(df)
+    print('Report generati:', PDF_OUT, DOCX_OUT)
+
+if __name__ == '__main__':
+    main()
