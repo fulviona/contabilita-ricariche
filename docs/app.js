@@ -1,5 +1,5 @@
 
-// Contabilità Ricariche – app.js v3.3 (date obbligatorie + storico + title->home)
+// Contabilità Ricariche – app.js v3.3.1
 
 /* THEME */
 const htmlEl = document.documentElement;
@@ -24,10 +24,10 @@ function openDB(){
       if(!db.objectStoreNames.contains(STORE)){
         const s = db.createObjectStore(STORE, { keyPath:'id' });
         [
-          { id:1, name:'Mario Rossi', totale:50, pagato:0, acconti:20, movimenti:[] },
-          { id:2, name:'Lucia Esposito', totale:120, pagato:100, acconti:0, movimenti:[] },
-          { id:3, name:'Bar Napoli', totale:200, pagato:150, acconti:0, movimenti:[] },
-          { id:4, name:'Studio Verdi', totale:70, pagato:70, acconti:0, movimenti:[] }
+          { id:1, name:'Mario Rossi',  totale:50,  pagato:0,   acconti:20, movimenti:[] },
+          { id:2, name:'Lucia Esposito', totale:120, pagato:100, acconti:0,  movimenti:[] },
+          { id:3, name:'Bar Napoli',    totale:200, pagato:150, acconti:0,  movimenti:[] },
+          { id:4, name:'Studio Verdi',  totale:70,  pagato:70,  acconti:0,  movimenti:[] }
         ].forEach(x=>s.add(x));
       } else {
         const store = e.target.transaction.objectStore(STORE);
@@ -49,10 +49,10 @@ function del(id){ return new Promise((res,rej)=>{ const q=tx('readwrite').delete
 function clearAll(){ return new Promise((res,rej)=>{ const q=tx('readwrite').clear(); q.onsuccess=()=>res(); q.onerror=e=>rej(e.target.error); }); }
 
 /* Helpers */
-function eur(x){ return (x<0?'-€ ':'€ ')+Math.abs(x).toFixed(2).replace('.',','); }
+function eur(x){ return (x<0?'-€ ':'€ ') + Math.abs(x).toFixed(2).replace('.', ','); }
 function saldo(c){ const d=c.totale-c.pagato-c.acconti; return d>0? -Math.abs(d) : (Math.abs(d)<1e-9?0:d); }
 function uid(){ return Date.now(); }
-function fmtDate(d){ const dt = new Date(d); const dd = String(dt.getDate()).padStart(2,'0'); const mm = String(dt.getMonth()+1).padStart(2,'0'); const yyyy = dt.getFullYear(); return `${dd}/${mm}/${yyyy}`; }
+function fmtDate(d){ const dt=new Date(d); const dd=String(dt.getDate()).padStart(2,'0'); const mm=String(dt.getMonth()+1).padStart(2,'0'); const yyyy=dt.getFullYear(); return `${dd}/${mm}/${yyyy}`; }
 
 /* Elements & Routing */
 const viewHome = document.getElementById('view-home');
@@ -93,12 +93,39 @@ function closeModal(){ modal.classList.add('hidden'); modalHandler=null; }
 btnCancel.addEventListener('click', closeModal);
 btnConfirm.addEventListener('click', async()=>{ if(modalHandler) await modalHandler(); closeModal(); renderRoute(); });
 
-/* Home */
+// Helper UX per modali dati (focus + Invio + Esc)
+function primeModalInputs({ focusId, confirmOnEnter = true }){
+  const focusEl = document.getElementById(focusId);
+  if (focusEl) { setTimeout(()=>{ try{ focusEl.focus(); if(focusEl.select) focusEl.select(); }catch(e){} }, 30); }
+  const keyHandler = (e) => {
+    if (e.key === 'Enter' && confirmOnEnter) { document.getElementById('confirm')?.click(); }
+    else if (e.key === 'Escape') { document.getElementById('cancel')?.click(); }
+  };
+  document.addEventListener('keydown', keyHandler, { once:false });
+  const cleanup = () => document.removeEventListener('keydown', keyHandler);
+  document.getElementById('confirm')?.addEventListener('click', cleanup, { once:true });
+  document.getElementById('cancel')?.addEventListener('click', cleanup, { once:true });
+}
+
+/* Home (summary solo quando NON cerchi) */
 async function renderHome(){
   const data = await getAll();
   const term = (searchInput.value||'').trim().toLowerCase();
-  const list = term ? data.filter(c=>c.name.toLowerCase().includes(term)) : data;
-  let html = '<div class="list">';
+  const isSearching = term !== '';
+  const list = isSearching ? data.filter(c=>c.name.toLowerCase().includes(term)) : data;
+
+  let html = '';
+  if(!isSearching){
+    const totalSaldo = data.reduce((acc,c)=> acc + saldo(c), 0);
+    const summaryClass = totalSaldo < 0 ? 'summary negative' : 'summary positive';
+    html += `
+<div class="${summaryClass}">
+  <div class="label">Somma saldi clienti</div>
+  <div class="value">${eur(totalSaldo)}</div>
+</div>`;
+  }
+
+  html += '<div class="list">';
   list.sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>{
     const s = saldo(c);
     html += `
@@ -120,6 +147,7 @@ async function renderHome(){
 </div>`;
   });
   html += '</div>';
+
   viewHome.innerHTML = html; show(viewHome);
 }
 
@@ -131,9 +159,7 @@ async function renderDetail(id){
   const s = saldo(c);
   let histHtml = '<div class="history"><h4>Storico movimenti</h4><ul>';
   if(hist.length===0){ histHtml += '<li class="meta">Nessun movimento registrato</li>'; }
-  else {
-    hist.forEach(m=>{ histHtml += `<li><span>${fmtDate(m.data)} - ${m.tipo==='ricarica'?'Ricarica':'Acconto'}</span><span>${eur(m.importo)}</span></li>`; });
-  }
+  else { hist.forEach(m=>{ histHtml += `<li><span>${fmtDate(m.data)} - ${m.tipo==='ricarica'?'Ricarica':'Acconto'}</span><span>${eur(m.importo)}</span></li>`; }); }
   histHtml += '</ul></div>';
 
   viewDetail.innerHTML = `
@@ -153,7 +179,6 @@ async function renderDetail(id){
       <button class="btn" onclick="addAcconto(${c.id})">Acconto</button>
       <button class="btn" onclick="addRicarica(${c.id})">Ricarica</button>
       <button class="btn" onclick="editCliente(${c.id})">Modifica</button>
-      <button class="btn danger" onclick="deleteCliente(${c.id})">Elimina</button>
       <button class="btn" onclick="go('#home')">Indietro</button>
     </div>
   </div>
@@ -161,7 +186,7 @@ async function renderDetail(id){
   show(viewDetail);
 }
 
-/* Settings (info card) */
+/* Settings (info PIN disabilitato) */
 function renderSettings(){
   const t = localStorage.getItem('theme')||'auto';
   viewSettings.innerHTML = `
@@ -208,6 +233,8 @@ async function newCliente(){
     const name=document.getElementById('f-name').value.trim(); if(!name){ alert('Inserisci un nome'); return; }
     await put({ id:uid(), name, totale:Number(document.getElementById('f-tot').value||0), pagato:Number(document.getElementById('f-pag').value||0), acconti:Number(document.getElementById('f-acc').value||0), movimenti:[] });
   });
+  document.querySelector('.modal-content')?.classList.add('modal-compact');
+  primeModalInputs({ focusId: 'f-name', confirmOnEnter: true });
 }
 
 async function editCliente(id){
@@ -222,17 +249,19 @@ async function editCliente(id){
     <label class='label'>Acconti (€)</label>
     <input id='f-acc' class='input' type='number' step='0.01' value='${c.acconti}'>
   `, async()=>{
-    c.name=document.getElementById('f-name').value.trim();
-    c.totale=Number(document.getElementById('f-tot').value||0);
-    c.pagato=Number(document.getElementById('f-pag').value||0);
-    c.acconti=Number(document.getElementById('f-acc').value||0);
+    c.name   = document.getElementById('f-name').value.trim();
+    c.totale = Number(document.getElementById('f-tot').value || 0);
+    c.pagato = Number(document.getElementById('f-pag').value || 0);
+    c.acconti= Number(document.getElementById('f-acc').value || 0);
     if(!Array.isArray(c.movimenti)) c.movimenti=[];
     if(!c.name){ alert('Il nome non può essere vuoto'); return; }
     await put(c);
   });
+  document.querySelector('.modal-content')?.classList.add('modal-compact');
+  primeModalInputs({ focusId: 'f-name', confirmOnEnter: true });
 }
 
-async function deleteCliente(id){ openModal('Elimina cliente', `<p>Confermi l\'eliminazione?</p>`, async()=>{ await del(id); }); }
+async function deleteCliente(id){ openModal('Elimina cliente', `<p>Confermi l'eliminazione?</p>`, async()=>{ await del(id); }); }
 
 async function addAcconto(id){
   const c=await getById(id); if(!c) return; if(!Array.isArray(c.movimenti)) c.movimenti=[];
@@ -248,6 +277,8 @@ async function addAcconto(id){
     if(!d){ alert('La data è obbligatoria'); return; }
     c.acconti += v; c.movimenti.push({ tipo:'acconto', importo:v, data:d }); await put(c);
   });
+  document.querySelector('.modal-content')?.classList.add('modal-compact');
+  primeModalInputs({ focusId: 'f-val', confirmOnEnter: true });
 }
 
 async function addRicarica(id){
@@ -264,6 +295,8 @@ async function addRicarica(id){
     if(!d){ alert('La data è obbligatoria'); return; }
     c.totale += v; c.movimenti.push({ tipo:'ricarica', importo:v, data:d }); await put(c);
   });
+  document.querySelector('.modal-content')?.classList.add('modal-compact');
+  primeModalInputs({ focusId: 'f-val', confirmOnEnter: true });
 }
 
 /* Import/Export */

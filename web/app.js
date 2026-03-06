@@ -1,18 +1,13 @@
+
 // Contabilità Ricariche – app.js v3.3.1
-// - Date obbligatorie per Ricarica/Acconto (default = oggi)
-// - Storico movimenti nel Dettaglio cliente
-// - Click su "Ricariche" = Home
-// - SOMMA SALDI in Home visibile SOLO quando non c’è ricerca (opzione B)
 
 /* THEME */
 const htmlEl = document.documentElement;
 function applyTheme(){
   const pref = localStorage.getItem('theme') || 'auto';
-  htmlEl.setAttribute('data-theme',
-    pref === 'auto'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : pref
-  );
+  htmlEl.setAttribute('data-theme', pref === 'auto'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : pref);
 }
 applyTheme();
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
@@ -23,7 +18,7 @@ const STORE = 'clients';
 let db;
 function openDB(){
   return new Promise((resolve,reject)=>{
-    const req = indexedDB.open(DB_NAME, 4); // v4 per movimenti[]
+    const req = indexedDB.open(DB_NAME,4);
     req.onupgradeneeded = (e)=>{
       db = e.target.result;
       if(!db.objectStoreNames.contains(STORE)){
@@ -35,14 +30,10 @@ function openDB(){
           { id:4, name:'Studio Verdi',  totale:70,  pagato:70,  acconti:0,  movimenti:[] }
         ].forEach(x=>s.add(x));
       } else {
-        // Migrazione: assicura movimenti[]
         const store = e.target.transaction.objectStore(STORE);
         const getAll = store.getAll();
         getAll.onsuccess = ()=>{
-          (getAll.result||[]).forEach(it=>{
-            if(!Array.isArray(it.movimenti)) it.movimenti=[];
-            store.put(it);
-          });
+          (getAll.result||[]).forEach(it=>{ if(!Array.isArray(it.movimenti)) it.movimenti=[]; store.put(it); });
         };
       }
     };
@@ -59,7 +50,7 @@ function clearAll(){ return new Promise((res,rej)=>{ const q=tx('readwrite').cle
 
 /* Helpers */
 function eur(x){ return (x<0?'-€ ':'€ ') + Math.abs(x).toFixed(2).replace('.', ','); }
-function saldo(c){ const d=c.totale - c.pagato - c.acconti; return d>0 ? -Math.abs(d) : (Math.abs(d)<1e-9?0:d); }
+function saldo(c){ const d=c.totale-c.pagato-c.acconti; return d>0? -Math.abs(d) : (Math.abs(d)<1e-9?0:d); }
 function uid(){ return Date.now(); }
 function fmtDate(d){ const dt=new Date(d); const dd=String(dt.getDate()).padStart(2,'0'); const mm=String(dt.getMonth()+1).padStart(2,'0'); const yyyy=dt.getFullYear(); return `${dd}/${mm}/${yyyy}`; }
 
@@ -86,10 +77,7 @@ const searchInput = document.getElementById('search-input');
 let searching=false;
 
 document.getElementById('btn-search').addEventListener('click',()=>{
-  searching=!searching;
-  searchBar.classList.toggle('active', searching);
-  if(searching){ searchInput.focus(); }
-  else { searchInput.value=''; renderHome(); }
+  searching=!searching; searchBar.classList.toggle('active', searching); if(searching){ searchInput.focus(); } else { searchInput.value=''; renderHome(); }
 });
 searchInput.addEventListener('input', renderHome);
 
@@ -105,7 +93,21 @@ function closeModal(){ modal.classList.add('hidden'); modalHandler=null; }
 btnCancel.addEventListener('click', closeModal);
 btnConfirm.addEventListener('click', async()=>{ if(modalHandler) await modalHandler(); closeModal(); renderRoute(); });
 
-/* Home (con SOMMA SALDI visibile solo quando non cerchi) */
+// Helper UX per modali dati (focus + Invio + Esc)
+function primeModalInputs({ focusId, confirmOnEnter = true }){
+  const focusEl = document.getElementById(focusId);
+  if (focusEl) { setTimeout(()=>{ try{ focusEl.focus(); if(focusEl.select) focusEl.select(); }catch(e){} }, 30); }
+  const keyHandler = (e) => {
+    if (e.key === 'Enter' && confirmOnEnter) { document.getElementById('confirm')?.click(); }
+    else if (e.key === 'Escape') { document.getElementById('cancel')?.click(); }
+  };
+  document.addEventListener('keydown', keyHandler, { once:false });
+  const cleanup = () => document.removeEventListener('keydown', keyHandler);
+  document.getElementById('confirm')?.addEventListener('click', cleanup, { once:true });
+  document.getElementById('cancel')?.addEventListener('click', cleanup, { once:true });
+}
+
+/* Home (summary solo quando NON cerchi) */
 async function renderHome(){
   const data = await getAll();
   const term = (searchInput.value||'').trim().toLowerCase();
@@ -113,44 +115,40 @@ async function renderHome(){
   const list = isSearching ? data.filter(c=>c.name.toLowerCase().includes(term)) : data;
 
   let html = '';
-
-  // SOMMA SALDI: visibile Solo quando NON cerchi (opzione B)
   if(!isSearching){
     const totalSaldo = data.reduce((acc,c)=> acc + saldo(c), 0);
     const summaryClass = totalSaldo < 0 ? 'summary negative' : 'summary positive';
     html += `
-      <div class="${summaryClass}">
-        <div class="label">Somma saldi clienti</div>
-        <div class="value">${eur(totalSaldo)}</div>
-      </div>
-    `;
+<div class="${summaryClass}">
+  <div class="label">Somma saldi clienti</div>
+  <div class="value">${eur(totalSaldo)}</div>
+</div>`;
   }
 
   html += '<div class="list">';
   list.sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>{
     const s = saldo(c);
     html += `
-      <div class="card">
-        <h3>${c.name}</h3>
-        <div class="row">
-          <span>Totale: ${eur(c.totale)}</span>
-          <span>Pagato: ${eur(c.pagato)}</span>
-          <span>Acconti: ${eur(c.acconti)}</span>
-          <span class="${s<0?'bad':'good'}">Saldo: ${eur(s)}</span>
-        </div>
-        <div class="actions">
-          <button class="btn" onclick="addAcconto(${c.id})">Acconto</button>
-          <button class="btn" onclick="addRicarica(${c.id})">Ricarica</button>
-          <button class="btn" onclick="editCliente(${c.id})">Modifica</button>
-          <button class="btn danger" onclick="deleteCliente(${c.id})">Elimina</button>
-          <button class="btn primary" onclick="go('#detail:${c.id}')">Dettaglio</button>
-        </div>
-      </div>`;
+<div class="card">
+  <h3>${c.name}</h3>
+  <div class="row">
+    <span>Totale: ${eur(c.totale)}</span>
+    <span>Pagato: ${eur(c.pagato)}</span>
+    <span>Acconti: ${eur(c.acconti)}</span>
+    <span class="${s<0?'bad':'good'}">Saldo: ${eur(s)}</span>
+  </div>
+  <div class="actions">
+    <button class="btn" onclick="addAcconto(${c.id})">Acconto</button>
+    <button class="btn" onclick="addRicarica(${c.id})">Ricarica</button>
+    <button class="btn" onclick="editCliente(${c.id})">Modifica</button>
+    <button class="btn danger" onclick="deleteCliente(${c.id})">Elimina</button>
+    <button class="btn primary" onclick="go('#detail:${c.id}')">Dettaglio</button>
+  </div>
+</div>`;
   });
   html += '</div>';
 
-  viewHome.innerHTML = html;
-  show(viewHome);
+  viewHome.innerHTML = html; show(viewHome);
 }
 
 /* Detail */
@@ -159,71 +157,62 @@ async function renderDetail(id){
   if(!Array.isArray(c.movimenti)) c.movimenti = [];
   const hist = [...c.movimenti].sort((a,b)=> new Date(b.data) - new Date(a.data));
   const s = saldo(c);
-
   let histHtml = '<div class="history"><h4>Storico movimenti</h4><ul>';
   if(hist.length===0){ histHtml += '<li class="meta">Nessun movimento registrato</li>'; }
-  else {
-    hist.forEach(m=>{
-      histHtml += `<li><span>${fmtDate(m.data)} - ${m.tipo==='ricarica'?'Ricarica':'Acconto'}</span><span>${eur(m.importo)}</span></li>`;
-    });
-  }
+  else { hist.forEach(m=>{ histHtml += `<li><span>${fmtDate(m.data)} - ${m.tipo==='ricarica'?'Ricarica':'Acconto'}</span><span>${eur(m.importo)}</span></li>`; }); }
   histHtml += '</ul></div>';
 
   viewDetail.innerHTML = `
-    <div class="detail">
-      <div class="group">
-        <h3>${c.name}</h3>
-        <div class="row">
-          <span>Totale: ${eur(c.totale)}</span>
-          <span>Pagato: ${eur(c.pagato)}</span>
-          <span>Acconti: ${eur(c.acconti)}</span>
-          <span class="${s<0?'bad':'good'}">Saldo: ${eur(s)}</span>
-        </div>
-        ${histHtml}
-      </div>
-      <div class="group">
-        <div class="actions">
-          <button class="btn" onclick="addAcconto(${c.id})">Acconto</button>
-          <button class="btn" onclick="addRicarica(${c.id})">Ricarica</button>
-          <button class="btn" onclick="editCliente(${c.id})">Modifica</button>
-          <button class="btn danger" onclick="deleteCliente(${c.id})">Elimina</button>
-          <button class="btn" onclick="go('#home')">Indietro</button>
-        </div>
-      </div>
-    </div>`;
+<div class="detail">
+  <div class="group">
+    <h3>${c.name}</h3>
+    <div class="row">
+      <span>Totale: ${eur(c.totale)}</span>
+      <span>Pagato: ${eur(c.pagato)}</span>
+      <span>Acconti: ${eur(c.acconti)}</span>
+      <span class="${s<0?'bad':'good'}">Saldo: ${eur(s)}</span>
+    </div>
+    ${histHtml}
+  </div>
+  <div class="group">
+    <div class="actions">
+      <button class="btn" onclick="addAcconto(${c.id})">Acconto</button>
+      <button class="btn" onclick="addRicarica(${c.id})">Ricarica</button>
+      <button class="btn" onclick="editCliente(${c.id})">Modifica</button>
+      <button class="btn" onclick="go('#home')">Indietro</button>
+    </div>
+  </div>
+</div>`;
   show(viewDetail);
 }
 
-/* Settings (nota: card PIN disabilitato introdotta in v3.2) */
+/* Settings (info PIN disabilitato) */
 function renderSettings(){
   const t = localStorage.getItem('theme')||'auto';
   viewSettings.innerHTML = `
-    <div class="settings">
-      <div class="setting">
-        <h4>Tema</h4>
-        <div class="inline"><span>Automatico</span><input type="radio" name="theme" value="auto" ${t==='auto'?'checked':''}></div>
-        <div class="inline"><span>Chiaro</span><input type="radio" name="theme" value="light" ${t==='light'?'checked':''}></div>
-        <div class="inline"><span>Scuro</span><input type="radio" name="theme" value="dark" ${t==='dark'?'checked':''}></div>
-      </div>
-      <div class="setting info-anim">
-        <h4>PIN Accesso</h4>
-        <div class="info-box">
-          <div class="info-icon">[DISABILITATA]</div>
-          <div class="info-text">Questa funzione è temporaneamente disabilitata.</div>
-        </div>
-      </div>
-      <div class="setting">
-        <h4>Operazioni</h4>
-        <div class="actions">
-          <button class="btn danger" id="btn-wipe-clients">Cancella TUTTI i clienti</button>
-          <button class="btn danger" id="btn-wipe-all">RESET totale (clienti + tema)</button>
-        </div>
-      </div>
-    </div>`;
-
-  document.querySelectorAll("input[name='theme']").forEach(r=>{
-    r.addEventListener('change', e=>{ localStorage.setItem('theme', e.target.value); applyTheme(); });
-  });
+<div class="settings">
+  <div class="setting">
+    <h4>Tema</h4>
+    <div class="inline"><span>Automatico</span><input type="radio" name="theme" value="auto" ${t==='auto'?'checked':''}></div>
+    <div class="inline"><span>Chiaro</span><input type="radio" name="theme" value="light" ${t==='light'?'checked':''}></div>
+    <div class="inline"><span>Scuro</span><input type="radio" name="theme" value="dark" ${t==='dark'?'checked':''}></div>
+  </div>
+  <div class="setting info-anim">
+    <h4>PIN Accesso</h4>
+    <div class="info-box">
+      <div class="info-icon">[DISABILITATA]</div>
+      <div class="info-text">Questa funzione è temporaneamente disabilitata.</div>
+    </div>
+  </div>
+  <div class="setting">
+    <h4>Operazioni</h4>
+    <div class="actions">
+      <button class="btn danger" id="btn-wipe-clients">Cancella TUTTI i clienti</button>
+      <button class="btn danger" id="btn-wipe-all">RESET totale (clienti + tema)</button>
+    </div>
+  </div>
+</div>`;
+  document.querySelectorAll("input[name='theme']").forEach(r=>r.addEventListener('change',e=>{ localStorage.setItem('theme',e.target.value); applyTheme(); }));
   document.getElementById('btn-wipe-clients').addEventListener('click', wipeClientsFlow);
   document.getElementById('btn-wipe-all').addEventListener('click', wipeAllFlow);
   show(viewSettings);
@@ -244,6 +233,8 @@ async function newCliente(){
     const name=document.getElementById('f-name').value.trim(); if(!name){ alert('Inserisci un nome'); return; }
     await put({ id:uid(), name, totale:Number(document.getElementById('f-tot').value||0), pagato:Number(document.getElementById('f-pag').value||0), acconti:Number(document.getElementById('f-acc').value||0), movimenti:[] });
   });
+  document.querySelector('.modal-content')?.classList.add('modal-compact');
+  primeModalInputs({ focusId: 'f-name', confirmOnEnter: true });
 }
 
 async function editCliente(id){
@@ -258,19 +249,19 @@ async function editCliente(id){
     <label class='label'>Acconti (€)</label>
     <input id='f-acc' class='input' type='number' step='0.01' value='${c.acconti}'>
   `, async()=>{
-    c.name=document.getElementById('f-name').value.trim();
-    c.totale=Number(document.getElementById('f-tot').value||0);
-    c.pagato=Number(document.getElementById('f-pag').value||0);
-    c.acconti=Number(document.getElementById('f-acc').value||0);
+    c.name   = document.getElementById('f-name').value.trim();
+    c.totale = Number(document.getElementById('f-tot').value || 0);
+    c.pagato = Number(document.getElementById('f-pag').value || 0);
+    c.acconti= Number(document.getElementById('f-acc').value || 0);
     if(!Array.isArray(c.movimenti)) c.movimenti=[];
     if(!c.name){ alert('Il nome non può essere vuoto'); return; }
     await put(c);
   });
+  document.querySelector('.modal-content')?.classList.add('modal-compact');
+  primeModalInputs({ focusId: 'f-name', confirmOnEnter: true });
 }
 
-async function deleteCliente(id){
-  openModal('Elimina cliente', `<p>Confermi l'eliminazione?</p>`, async()=>{ await del(id); });
-}
+async function deleteCliente(id){ openModal('Elimina cliente', `<p>Confermi l'eliminazione?</p>`, async()=>{ await del(id); }); }
 
 async function addAcconto(id){
   const c=await getById(id); if(!c) return; if(!Array.isArray(c.movimenti)) c.movimenti=[];
@@ -286,6 +277,8 @@ async function addAcconto(id){
     if(!d){ alert('La data è obbligatoria'); return; }
     c.acconti += v; c.movimenti.push({ tipo:'acconto', importo:v, data:d }); await put(c);
   });
+  document.querySelector('.modal-content')?.classList.add('modal-compact');
+  primeModalInputs({ focusId: 'f-val', confirmOnEnter: true });
 }
 
 async function addRicarica(id){
@@ -302,6 +295,8 @@ async function addRicarica(id){
     if(!d){ alert('La data è obbligatoria'); return; }
     c.totale += v; c.movimenti.push({ tipo:'ricarica', importo:v, data:d }); await put(c);
   });
+  document.querySelector('.modal-content')?.classList.add('modal-compact');
+  primeModalInputs({ focusId: 'f-val', confirmOnEnter: true });
 }
 
 /* Import/Export */
@@ -311,8 +306,7 @@ fileInput.addEventListener('change', async(e)=>{
   const file=e.target.files&&e.target.files[0]; if(!file) return;
   try{
     const text=await file.text(); const obj=JSON.parse(text); if(!obj||!Array.isArray(obj.data)) throw new Error('Formato non valido');
-    await clearAll();
-    for(const it of obj.data){ if(typeof it.id!=='number') continue; if(!Array.isArray(it.movimenti)) it.movimenti=[]; await put(it); }
+    await clearAll(); for(const it of obj.data){ if(typeof it.id!=='number') continue; if(!Array.isArray(it.movimenti)) it.movimenti=[]; await put(it); }
     go('#home');
   }catch(err){ alert('Errore importazione: '+err.message); }
   finally{ fileInput.value=''; }
@@ -337,4 +331,3 @@ document.getElementById('btn-settings').addEventListener('click', ()=>go('#setti
 
 // expose
 Object.assign(window,{ addAcconto, addRicarica, editCliente, deleteCliente, go });
-``
