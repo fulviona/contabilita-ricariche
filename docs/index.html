@@ -1,0 +1,65 @@
+
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Contabilità Ricariche</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Contabilità Ricariche</h1>
+    <div class="actions">
+      <button id="btn-importa" title="Importa dati (.json)">Importa</button>
+      <button id="btn-esporta" title="Esporta dati (.json)">Esporta</button>
+      <button id="btn-stampa" title="Stampa / Condividi">Stampa/Condividi</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="ios-only" class="hidden warn">Questa app è disponibile solo su iPhone/iPad.</div>
+
+    <table id="clients-table" class="card">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Totale</th>
+          <th>Pagato</th>
+          <th>Acconti</th>
+          <th>Saldo</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h2 id="modal-title">Titolo</h2>
+      <label>Importo (€)
+        <input type="number" id="amount" inputmode="decimal" step="0.01" />
+      </label>
+      <div class="modal-actions">
+        <button id="cancel">Annulla</button>
+        <button id="confirm">Conferma</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="file-input" accept="application/json" class="hidden" />
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js');
+      });
+    }
+  </script>
+</body>
+</html>
