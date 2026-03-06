@@ -2,20 +2,14 @@
   "id": "contabilita-ricariche-pwa",
   "name": "Contabilità Ricariche",
   "short_name": "Ricariche",
-  "description": "PWA stile app iPhone per gestire clienti, ricariche, acconti e saldi. Dati salvati in locale (IndexedDB), offline.",
+  "description": "PWA iPhone-style per ricariche, acconti e saldi. Dati locali (IndexedDB) con storico movimenti.",
   "lang": "it-IT",
-  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0ea5e9",
   "theme_color": "#0ea5e9",
-  "categories": [
-    "finance",
-    "productivity",
-    "business"
-  ],
   "icons": [
     {
       "src": "assets/icon-192.png",

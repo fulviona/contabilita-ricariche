@@ -1,5 +1,5 @@
 
-// Contabilità Ricariche – app.js v3.2 (NO PIN)
+// Contabilità Ricariche – app.js v3.3 (date obbligatorie + storico + title->home)
 
 /* THEME */
 const htmlEl = document.documentElement;
@@ -18,17 +18,23 @@ const STORE = 'clients';
 let db;
 function openDB(){
   return new Promise((resolve,reject)=>{
-    const req = indexedDB.open(DB_NAME,3);
+    const req = indexedDB.open(DB_NAME,4);
     req.onupgradeneeded = (e)=>{
       db = e.target.result;
       if(!db.objectStoreNames.contains(STORE)){
         const s = db.createObjectStore(STORE, { keyPath:'id' });
         [
-          { id:1, name:'Mario Rossi', totale:50, pagato:0, acconti:20 },
-          { id:2, name:'Lucia Esposito', totale:120, pagato:100, acconti:0 },
-          { id:3, name:'Bar Napoli', totale:200, pagato:150, acconti:0 },
-          { id:4, name:'Studio Verdi', totale:70, pagato:70, acconti:0 }
+          { id:1, name:'Mario Rossi', totale:50, pagato:0, acconti:20, movimenti:[] },
+          { id:2, name:'Lucia Esposito', totale:120, pagato:100, acconti:0, movimenti:[] },
+          { id:3, name:'Bar Napoli', totale:200, pagato:150, acconti:0, movimenti:[] },
+          { id:4, name:'Studio Verdi', totale:70, pagato:70, acconti:0, movimenti:[] }
         ].forEach(x=>s.add(x));
+      } else {
+        const store = e.target.transaction.objectStore(STORE);
+        const getAll = store.getAll();
+        getAll.onsuccess = ()=>{
+          (getAll.result||[]).forEach(it=>{ if(!Array.isArray(it.movimenti)) it.movimenti=[]; store.put(it); });
+        };
       }
     };
     req.onsuccess=(e)=>{ db=e.target.result; resolve(db); };
@@ -46,6 +52,7 @@ function clearAll(){ return new Promise((res,rej)=>{ const q=tx('readwrite').cle
 function eur(x){ return (x<0?'-€ ':'€ ')+Math.abs(x).toFixed(2).replace('.',','); }
 function saldo(c){ const d=c.totale-c.pagato-c.acconti; return d>0? -Math.abs(d) : (Math.abs(d)<1e-9?0:d); }
 function uid(){ return Date.now(); }
+function fmtDate(d){ const dt = new Date(d); const dd = String(dt.getDate()).padStart(2,'0'); const mm = String(dt.getMonth()+1).padStart(2,'0'); const yyyy = dt.getFullYear(); return `${dd}/${mm}/${yyyy}`; }
 
 /* Elements & Routing */
 const viewHome = document.getElementById('view-home');
@@ -53,6 +60,8 @@ const viewDetail = document.getElementById('view-detail');
 const viewSettings = document.getElementById('view-settings');
 function show(v){ [viewHome,viewDetail,viewSettings].forEach(x=>x.classList.remove('active')); v.classList.add('active'); }
 function go(r){ location.hash=r; }
+
+document.getElementById('title-home').addEventListener('click', ()=> go('#home'));
 
 window.addEventListener('hashchange', renderRoute);
 async function renderRoute(){
@@ -117,7 +126,16 @@ async function renderHome(){
 /* Detail */
 async function renderDetail(id){
   const c = await getById(id); if(!c){ go('#home'); return; }
+  if(!Array.isArray(c.movimenti)) c.movimenti = [];
+  const hist = [...c.movimenti].sort((a,b)=> new Date(b.data) - new Date(a.data));
   const s = saldo(c);
+  let histHtml = '<div class="history"><h4>Storico movimenti</h4><ul>';
+  if(hist.length===0){ histHtml += '<li class="meta">Nessun movimento registrato</li>'; }
+  else {
+    hist.forEach(m=>{ histHtml += `<li><span>${fmtDate(m.data)} - ${m.tipo==='ricarica'?'Ricarica':'Acconto'}</span><span>${eur(m.importo)}</span></li>`; });
+  }
+  histHtml += '</ul></div>';
+
   viewDetail.innerHTML = `
 <div class="detail">
   <div class="group">
@@ -128,6 +146,7 @@ async function renderDetail(id){
       <span>Acconti: ${eur(c.acconti)}</span>
       <span class="${s<0?'bad':'good'}">Saldo: ${eur(s)}</span>
     </div>
+    ${histHtml}
   </div>
   <div class="group">
     <div class="actions">
@@ -142,7 +161,7 @@ async function renderDetail(id){
   show(viewDetail);
 }
 
-/* Settings (PIN info card A2-b) */
+/* Settings (info card) */
 function renderSettings(){
   const t = localStorage.getItem('theme')||'auto';
   viewSettings.innerHTML = `
@@ -156,7 +175,7 @@ function renderSettings(){
   <div class="setting info-anim">
     <h4>PIN Accesso</h4>
     <div class="info-box">
-      <div class="info-icon">🚫</div>
+      <div class="info-icon">[DISABILITATA]</div>
       <div class="info-text">Questa funzione è temporaneamente disabilitata.</div>
     </div>
   </div>
@@ -187,7 +206,7 @@ async function newCliente(){
     <input id='f-acc' class='input' type='number' step='0.01' value='0'>
   `, async()=>{
     const name=document.getElementById('f-name').value.trim(); if(!name){ alert('Inserisci un nome'); return; }
-    await put({ id:uid(), name, totale:Number(document.getElementById('f-tot').value||0), pagato:Number(document.getElementById('f-pag').value||0), acconti:Number(document.getElementById('f-acc').value||0) });
+    await put({ id:uid(), name, totale:Number(document.getElementById('f-tot').value||0), pagato:Number(document.getElementById('f-pag').value||0), acconti:Number(document.getElementById('f-acc').value||0), movimenti:[] });
   });
 }
 
@@ -207,14 +226,45 @@ async function editCliente(id){
     c.totale=Number(document.getElementById('f-tot').value||0);
     c.pagato=Number(document.getElementById('f-pag').value||0);
     c.acconti=Number(document.getElementById('f-acc').value||0);
+    if(!Array.isArray(c.movimenti)) c.movimenti=[];
     if(!c.name){ alert('Il nome non può essere vuoto'); return; }
     await put(c);
   });
 }
 
-async function deleteCliente(id){ openModal('Elimina cliente', `<p>Confermi l'eliminazione?</p>`, async()=>{ await del(id); }); }
-async function addAcconto(id){ const c=await getById(id); if(!c) return; openModal('Aggiungi acconto', `<label class='label'>Importo (€)</label><input id='f-val' class='input' type='number' step='0.01'>`, async()=>{ const v=Number(document.getElementById('f-val').value||0); if(v>0){ c.acconti+=v; await put(c);} }); }
-async function addRicarica(id){ const c=await getById(id); if(!c) return; openModal('Aggiungi ricarica', `<label class='label'>Importo (€)</label><input id='f-val' class='input' type='number' step='0.01'>`, async()=>{ const v=Number(document.getElementById('f-val').value||0); if(v>0){ c.totale+=v; await put(c);} }); }
+async function deleteCliente(id){ openModal('Elimina cliente', `<p>Confermi l\'eliminazione?</p>`, async()=>{ await del(id); }); }
+
+async function addAcconto(id){
+  const c=await getById(id); if(!c) return; if(!Array.isArray(c.movimenti)) c.movimenti=[];
+  const today = new Date().toISOString().slice(0,10);
+  openModal('Aggiungi acconto', `
+    <label class='label'>Importo (€)</label>
+    <input id='f-val' class='input' type='number' step='0.01' required>
+    <label class='label'>Data</label>
+    <input id='f-date' class='input' type='date' required value='${today}'>
+  `, async()=>{
+    const v=Number(document.getElementById('f-val').value||0); const d=document.getElementById('f-date').value;
+    if(v<=0){ alert('Importo non valido'); return; }
+    if(!d){ alert('La data è obbligatoria'); return; }
+    c.acconti += v; c.movimenti.push({ tipo:'acconto', importo:v, data:d }); await put(c);
+  });
+}
+
+async function addRicarica(id){
+  const c=await getById(id); if(!c) return; if(!Array.isArray(c.movimenti)) c.movimenti=[];
+  const today = new Date().toISOString().slice(0,10);
+  openModal('Aggiungi ricarica', `
+    <label class='label'>Importo (€)</label>
+    <input id='f-val' class='input' type='number' step='0.01' required>
+    <label class='label'>Data</label>
+    <input id='f-date' class='input' type='date' required value='${today}'>
+  `, async()=>{
+    const v=Number(document.getElementById('f-val').value||0); const d=document.getElementById('f-date').value;
+    if(v<=0){ alert('Importo non valido'); return; }
+    if(!d){ alert('La data è obbligatoria'); return; }
+    c.totale += v; c.movimenti.push({ tipo:'ricarica', importo:v, data:d }); await put(c);
+  });
+}
 
 /* Import/Export */
 const fileInput = document.getElementById('file-input');
@@ -223,7 +273,7 @@ fileInput.addEventListener('change', async(e)=>{
   const file=e.target.files&&e.target.files[0]; if(!file) return;
   try{
     const text=await file.text(); const obj=JSON.parse(text); if(!obj||!Array.isArray(obj.data)) throw new Error('Formato non valido');
-    await clearAll(); for(const it of obj.data){ if(typeof it.id!=='number') continue; await put(it); }
+    await clearAll(); for(const it of obj.data){ if(typeof it.id!=='number') continue; if(!Array.isArray(it.movimenti)) it.movimenti=[]; await put(it); }
     go('#home');
   }catch(err){ alert('Errore importazione: '+err.message); }
   finally{ fileInput.value=''; }
@@ -231,7 +281,7 @@ fileInput.addEventListener('change', async(e)=>{
 
 document.getElementById('btn-export').addEventListener('click', async()=>{
   const data=await getAll();
-  const blob=new Blob([JSON.stringify({ version:3, exportedAt:new Date().toISOString(), data },null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({ version:4, exportedAt:new Date().toISOString(), data },null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`ricariche-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(a.href);
 });
 
@@ -246,5 +296,5 @@ document.getElementById('btn-settings').addEventListener('click', ()=>go('#setti
 /* Init */
 (async function(){ await openDB(); renderRoute(); })();
 
-// expose for inline handlers
+// expose
 Object.assign(window,{ addAcconto, addRicarica, editCliente, deleteCliente, go });

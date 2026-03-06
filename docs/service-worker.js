@@ -1,6 +1,6 @@
 
-// Contabilità Ricariche – service-worker.js v3.2
-const CACHE_VERSION = 'v3.2.0';
+// Contabilità Ricariche – service-worker.js v3.3
+const CACHE_VERSION = 'v3.3.0';
 const STATIC_CACHE = `ricariche-static-${CACHE_VERSION}`;
 const APP_SHELL = [
   './', './index.html', './styles.css', './app.js', './manifest.json',

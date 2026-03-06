@@ -10,12 +10,11 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-
 .hidden{display:none!important}
 
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--muted)}
-.title{font-weight:700;font-size:17px}
+.title{font-weight:700;font-size:17px;cursor:pointer}
 .toolbar{display:flex;gap:8px}
 .toolbar button{width:36px;height:36px;min-height:44px;border-radius:10px;border:1px solid var(--muted);background:transparent;color:var(--fg);font-size:18px;line-height:1}
 .toolbar button:active{background:var(--muted)}
 
-/* Search bar */
 .search-bar{position:sticky;top:52px;z-index:19;background:var(--card);border-bottom:1px solid var(--muted);padding:8px 12px;transform:translateY(-100%);opacity:0;visibility:hidden;transition:transform .22s ease,opacity .22s ease,visibility 0s linear .22s;box-shadow:var(--shadow)}
 .search-bar.active{transform:translateY(0);opacity:1;visibility:visible;transition:transform .22s ease,opacity .22s ease}
 #search-input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--muted);background:transparent;color:var(--fg);font-size:16px}
@@ -25,7 +24,6 @@ main{padding:12px}
 .view{display:none}
 .view.active{display:block}
 
-/* Cards */
 .list{display:flex;flex-direction:column;gap:12px;max-width:680px;margin:0 auto}
 .card{background:var(--card);border:1px solid var(--muted);border-radius:14px;padding:12px}
 .card h3{margin:0 0 6px 0;font-size:18px}
@@ -37,24 +35,24 @@ main{padding:12px}
 .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn.danger{border-color:var(--bad);color:var(--bad)}
 
-/* Detail & Settings */
 .detail{max-width:680px;margin:0 auto}
 .detail .group,.setting{background:var(--card);border:1px solid var(--muted);border-radius:14px;padding:12px;margin-bottom:12px}
 .detail .actions{justify-content:space-between}
 .settings{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .setting h4{margin:0 0 8px 0}
 .setting .inline{display:flex;align-items:center;justify-content:space-between}
-.switch{position:relative;width:44px;height:26px;background:var(--muted);border-radius:18px}
-.switch input{display:none}
-.switch .dot{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s ease}
-.switch input:checked + .dot{transform:translateX(18px)}
 
-/* Info box (PIN disabilitato) */
 .info-box{display:flex;gap:10px;align-items:flex-start;background:var(--muted);color:var(--sub);padding:10px;border-radius:10px}
 .info-icon{font-size:18px;line-height:1.1}
 .info-text{font-size:14px}
 @keyframes softIn{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}
 .info-anim{animation:softIn .25s ease-out}
+
+.history{margin-top:6px}
+.history h4{margin:0 0 8px 0}
+.history ul{list-style:none;padding:0;margin:0}
+.history li{display:flex;justify-content:space-between;border-bottom:1px dashed var(--muted);padding:6px 0;color:var(--fg)}
+.history .meta{color:var(--sub);font-size:13px}
 
 @media (orientation:landscape){ main{padding:16px} }
 @media (hover:none){ .btn,.toolbar button{min-height:44px} }
