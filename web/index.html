@@ -95,3 +95,9 @@
 
 </body>
 </html>
+
+script>
+if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+  navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
+}
+</script>
